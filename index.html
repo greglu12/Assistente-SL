@@ -29,3 +29,52 @@ let best=s[0].sc,g={};s.filter(x=>x.sc>=Math.max(3,best-3)).slice(0,80).forEach(
 let a=Object.values(g).sort((x,y)=>y.sc-x.sc).slice(0,3),h=a.length===1?'Ho trovato questa prestazione nel catalogo Santa Lucia:':'Ho trovato queste possibili prestazioni nel catalogo Santa Lucia:';
 a.forEach(x=>{let ms=[...x.m];h+=`<div class="card"><h3>${esc(x.p)}</h3><div class="meta">${esc(x.s)}</div>${x.d&&n(x.d)!==n(x.p)?`<div class="desc">${esc(x.d)}</div>`:''}${ms.length?`<div class="docs"><b>Medico/i:</b> ${ms.map(esc).join(', ')}</div>`:''}<div class="actions"><button class="btn secondary" onclick="window.print()">Crea / stampa PDF</button><button class="btn primary" onclick="alert('Qui collegheremo il link ufficiale di prenotazione Santa Lucia.')">Prenota sul sito</button></div></div>`});bubble(h)}
 </script></body></html>
+<script>
+const WORKER_URL="https://assistente-sl-ai.reportbiohack.workers.dev/";
+
+go=async function(){
+  const campo=document.getElementById("q");
+  const richiesta=campo.value.trim();
+  if(!richiesta)return;
+
+  campo.value="";
+  bubble(esc(richiesta),"usr");
+  bubble("Sto elaborando la richiesta…","bot");
+
+  try{
+    const risposta=await fetch(WORKER_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({richiesta})
+    });
+
+    const dati=await risposta.json();
+
+    if(!risposta.ok){
+      throw new Error(dati.detail||dati.error||"Errore del servizio");
+    }
+
+    let testo=dati.risposta||dati.messaggio||dati.answer||dati.testo;
+
+    if(testo){
+      testo=esc(String(testo)).replace(/\n/g,"<br>");
+    }else{
+      testo=Object.entries(dati)
+        .filter(([,valore])=>valore!==null&&valore!==undefined&&valore!=="")
+        .map(([chiave,valore])=>{
+          const nome=chiave.replaceAll("_"," ");
+          const contenuto=typeof valore==="object"
+            ?JSON.stringify(valore)
+            :String(valore);
+          return "<b>"+esc(nome)+":</b> "+esc(contenuto);
+        })
+        .join("<br>");
+    }
+
+    bubble(testo||"Richiesta elaborata correttamente.","bot");
+  }catch(errore){
+    console.error(errore);
+    bubble("Al momento non riesco a elaborare la richiesta. Riprova tra poco.","bot");
+  }
+};
+</script>
