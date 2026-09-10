@@ -32,7 +32,8 @@ a.forEach(x=>{let ms=[...x.m];h+=`<div class="card"><h3>${esc(x.p)}</h3><div cla
 <script>
 
 const WORKER_URL="https://assistente-sl-ai.reportbiohack.workers.dev/";
-
+let contestoRichiesta = "";
+  
 function ricercaCatalogoAI(dati, richiesta){
 
   // Costruiamo la ricerca usando ciò che ha capito l'AI,
@@ -163,7 +164,9 @@ go=async function(){
 
   const campo=document.getElementById("q");
   const richiesta=campo.value.trim();
-
+const richiestaCompleta = contestoRichiesta
+  ? contestoRichiesta + " " + richiesta
+  : richiesta;
   if(!richiesta)return;
 
   campo.value="";
@@ -176,7 +179,7 @@ go=async function(){
       headers:{
         "Content-Type":"application/json"
       },
-      body:JSON.stringify({richiesta})
+      body:JSON.stringify({richiesta: richiestaCompleta})
     });
 
     const dati=await risposta.json();
@@ -202,7 +205,9 @@ go=async function(){
 
     // L'AI ha bisogno di una informazione in più
     if(dati.necessita_chiarimento===true){
-
+      
+      contestoRichiesta = richiestaCompleta;
+      
       bubble(
         esc(
           dati.domanda_chiarimento ||
@@ -216,7 +221,8 @@ go=async function(){
 
     // La richiesta è sufficientemente chiara:
     // cerchiamo SOLO nel catalogo reale Santa Lucia
-    ricercaCatalogoAI(dati,richiesta);
+    contestoRichiesta = "";
+    ricercaCatalogoAI(dati,richiestaCompleta);
 
   }catch(errore){
 
