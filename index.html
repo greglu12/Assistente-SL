@@ -265,11 +265,13 @@ function ricercaCatalogoAI(dati, richiesta){
   // Costruiamo la ricerca usando ciò che ha capito l'AI,
   // ma i risultati vengono sempre e solo dal catalogo D.
   const parti=[
-    richiesta,
-    dati.area_clinica || "",
-    dati.intento || "",
-    ...(Array.isArray(dati.concetti) ? dati.concetti : [])
-  ];
+  richiesta,
+  dati.area_clinica || "",
+  dati.intento || "",
+  dati.termine_normalizzato || "",
+  ...(Array.isArray(dati.sinonimi) ? dati.sinonimi : []),
+  ...(Array.isArray(dati.concetti) ? dati.concetti : [])
+];
 
   let t=terms(parti.join(" "));
 
