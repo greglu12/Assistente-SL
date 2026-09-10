@@ -30,51 +30,204 @@ let a=Object.values(g).sort((x,y)=>y.sc-x.sc).slice(0,3),h=a.length===1?'Ho trov
 a.forEach(x=>{let ms=[...x.m];h+=`<div class="card"><h3>${esc(x.p)}</h3><div class="meta">${esc(x.s)}</div>${x.d&&n(x.d)!==n(x.p)?`<div class="desc">${esc(x.d)}</div>`:''}${ms.length?`<div class="docs"><b>Medico/i:</b> ${ms.map(esc).join(', ')}</div>`:''}<div class="actions"><button class="btn secondary" onclick="window.print()">Crea / stampa PDF</button><button class="btn primary" onclick="alert('Qui collegheremo il link ufficiale di prenotazione Santa Lucia.')">Prenota sul sito</button></div></div>`});bubble(h)}
 </script></body></html>
 <script>
+<script>
+
 const WORKER_URL="https://assistente-sl-ai.reportbiohack.workers.dev/";
 
+function ricercaCatalogoAI(dati, richiesta){
+
+  // Costruiamo la ricerca usando ciò che ha capito l'AI,
+  // ma i risultati vengono sempre e solo dal catalogo D.
+  const parti=[
+    richiesta,
+    dati.area_clinica || "",
+    dati.intento || "",
+    ...(Array.isArray(dati.concetti) ? dati.concetti : [])
+  ];
+
+  let t=terms(parti.join(" "));
+
+  // Alcune equivalenze utili per il catalogo Santa Lucia
+  const testo=n(parti.join(" "));
+
+  if(testo.includes("addominal")){
+    t.push("addome","addominale");
+  }
+
+  if(testo.includes("ecograf")){
+    t.push("ecografia");
+  }
+
+  t=[...new Set(t)];
+
+  let risultati=D
+    .map(r=>({r,sc:score(r,t)}))
+    .filter(x=>x.sc>0)
+    .sort((a,b)=>b.sc-a.sc);
+
+  if(!risultati.length){
+    bubble(
+      "Non riesco ancora a collegare con sufficiente sicurezza la richiesta a una prestazione presente nel catalogo Santa Lucia. Prova a specificare meglio la zona del corpo o il tipo di esame.",
+      "bot"
+    );
+    return;
+  }
+
+  const best=risultati[0].sc;
+  const gruppi={};
+
+  risultati
+    .filter(x=>x.sc>=Math.max(3,best-3))
+    .slice(0,100)
+    .forEach(x=>{
+
+      const k=n(x.r.prestazione);
+
+      if(!gruppi[k]){
+        gruppi[k]={
+          p:x.r.prestazione,
+          s:x.r.specialita,
+          d:x.r.descrizione,
+          m:new Set(),
+          sc:x.sc
+        };
+      }
+
+      if(x.r.medico){
+        gruppi[k].m.add(x.r.medico);
+      }
+
+      if(!gruppi[k].d && x.r.descrizione){
+        gruppi[k].d=x.r.descrizione;
+      }
+
+      gruppi[k].sc=Math.max(gruppi[k].sc,x.sc);
+    });
+
+  const prestazioni=Object.values(gruppi)
+    .sort((a,b)=>b.sc-a.sc)
+    .slice(0,5);
+
+  if(!prestazioni.length){
+    bubble(
+      "Non ho trovato una corrispondenza sufficientemente precisa nel catalogo Santa Lucia.",
+      "bot"
+    );
+    return;
+  }
+
+  let h=prestazioni.length===1
+    ? "Ho trovato questa prestazione nel catalogo Santa Lucia:"
+    : "Ho trovato queste possibili prestazioni nel catalogo Santa Lucia:";
+
+  prestazioni.forEach(x=>{
+
+    const medici=[...x.m];
+
+    h+=`
+      <div class="card">
+        <h3>${esc(x.p)}</h3>
+        <div class="meta">${esc(x.s)}</div>
+
+        ${
+          x.d && n(x.d)!==n(x.p)
+          ? `<div class="desc">${esc(x.d)}</div>`
+          : ""
+        }
+
+        ${
+          medici.length
+          ? `<div class="docs"><b>Medico/i:</b> ${medici.map(esc).join(", ")}</div>`
+          : ""
+        }
+
+        <div class="actions">
+          <button class="btn secondary"
+            onclick="window.print()">
+            Crea / stampa PDF
+          </button>
+
+          <button class="btn primary"
+            onclick="alert('Qui collegheremo il link ufficiale di prenotazione Santa Lucia.')">
+            Prenota sul sito
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  bubble(h,"bot");
+}
+
+
 go=async function(){
+
   const campo=document.getElementById("q");
   const richiesta=campo.value.trim();
+
   if(!richiesta)return;
 
   campo.value="";
   bubble(esc(richiesta),"usr");
-  bubble("Sto elaborando la richiesta…","bot");
 
   try{
+
     const risposta=await fetch(WORKER_URL,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{
+        "Content-Type":"application/json"
+      },
       body:JSON.stringify({richiesta})
     });
 
     const dati=await risposta.json();
 
     if(!risposta.ok){
-      throw new Error(dati.detail||dati.error||"Errore del servizio");
+      throw new Error(
+        dati.detail ||
+        dati.error ||
+        "Errore del servizio"
+      );
     }
 
-    let testo=dati.risposta||dati.messaggio||dati.answer||dati.testo;
+    // Caso potenzialmente urgente
+    if(dati.urgente===true){
 
-    if(testo){
-      testo=esc(String(testo)).replace(/\n/g,"<br>");
-    }else{
-      testo=Object.entries(dati)
-        .filter(([,valore])=>valore!==null&&valore!==undefined&&valore!=="")
-        .map(([chiave,valore])=>{
-          const nome=chiave.replaceAll("_"," ");
-          const contenuto=typeof valore==="object"
-            ?JSON.stringify(valore)
-            :String(valore);
-          return "<b>"+esc(nome)+":</b> "+esc(contenuto);
-        })
-        .join("<br>");
+      bubble(
+        "I sintomi descritti possono richiedere una valutazione urgente. In una situazione urgente rivolgiti ai servizi di emergenza. Per richieste non urgenti posso aiutarti a orientarti tra le prestazioni Santa Lucia.",
+        "bot"
+      );
+
+      return;
     }
 
-    bubble(testo||"Richiesta elaborata correttamente.","bot");
+    // L'AI ha bisogno di una informazione in più
+    if(dati.necessita_chiarimento===true){
+
+      bubble(
+        esc(
+          dati.domanda_chiarimento ||
+          "Puoi specificare meglio ciò di cui hai bisogno?"
+        ),
+        "bot"
+      );
+
+      return;
+    }
+
+    // La richiesta è sufficientemente chiara:
+    // cerchiamo SOLO nel catalogo reale Santa Lucia
+    ricercaCatalogoAI(dati,richiesta);
+
   }catch(errore){
+
     console.error(errore);
-    bubble("Al momento non riesco a elaborare la richiesta. Riprova tra poco.","bot");
+
+    bubble(
+      "Al momento non riesco a elaborare la richiesta. Riprova tra poco.",
+      "bot"
+    );
   }
 };
+
 </script>
