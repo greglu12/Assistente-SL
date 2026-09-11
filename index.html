@@ -364,11 +364,7 @@ function ricercaCatalogoAI(dati, richiesta){
     const p0=prestazioni[0];
     const medici0=[...p0.m];
 
-    h=`Sì. Presso Santa Lucia è possibile effettuare <b>${esc(p0.p)}</b>${
-      medici0.length
-        ? ` con ${medici0.map(esc).join(", ")}`
-        : ""
-    }.`;
+    h=`Sì. Presso Santa Lucia è possibile effettuare <b>${esc(p0.p)}</b>.`;
   }else{
     h="Ho trovato queste possibili prestazioni nel catalogo Santa Lucia:";
   }
