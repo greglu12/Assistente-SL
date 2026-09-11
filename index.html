@@ -260,7 +260,25 @@ function n(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 function esc(s){return(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function terms(q){let stop=['vorrei','fare','devo','cerco','una','uno','della','delle','alla','alle','per','con','mio','mia','controllare'];let t=n(q).split(' ').filter(x=>x.length>2&&!stop.includes(x)),z=[...t];t.forEach(x=>A[x]&&z.push(...A[x]));return[...new Set(z)]}
 function score(r,t){let p=n(r.prestazione),s=n(r.specialita),m=n(r.medico),d=n(r.descrizione),v=0;t.forEach(x=>{if(p.includes(x))v+=6;if(s.includes(x))v+=4;if(m.includes(x))v+=3;if(d.includes(x))v+=1});return v}
-function bubble(h,c='bot'){let x=document.createElement('div');x.className='b '+c;x.innerHTML=h;document.getElementById('msgs').appendChild(x);x.scrollIntoView({behavior:'smooth',block:'end'})}
+function scrollToInput(){
+  setTimeout(()=>{
+    const q=document.getElementById('q');
+    if(q){
+      q.scrollIntoView({
+        behavior:'smooth',
+        block:'end'
+      });
+    }
+  },100);
+}
+
+function bubble(h,c='bot'){
+  let x=document.createElement('div');
+  x.className='b '+c;
+  x.innerHTML=h;
+  document.getElementById('msgs').appendChild(x);
+  scrollToInput();
+}
 function ask(x){document.getElementById('q').value=x;go()}
 function go(){let e=document.getElementById('q'),q=e.value.trim();if(!q)return;e.value='';bubble(esc(q),'usr');
 if(/dolore.*petto|petto.*dolore|difficolt[aà].*respir|perdita.*coscienza|svenimento/i.test(q)){bubble("I sintomi descritti possono richiedere una valutazione urgente. In una situazione urgente rivolgiti ai servizi di emergenza. Per richieste non urgenti posso aiutarti a trovare una prestazione Santa Lucia.");return}
