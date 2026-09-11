@@ -357,8 +357,24 @@ function ricercaCatalogoAI(dati, richiesta){
     );
     return;
   }
+const migliori=prestazioni.filter(
+  p=>p.sc>=prestazioni[0].sc-1
+);
 
-  let h;
+if(migliori.length>1){
+  contestoRichiesta=richiesta;
+
+  const opzioni=migliori
+    .map(p=>`<b>${esc(p.p)}</b>`)
+    .join("<br>");
+
+  bubble(
+    `Ho trovato più prestazioni compatibili con la tua richiesta. Quale di queste intendi?<br><br>${opzioni}`,
+    "bot"
+  );
+
+  return;
+}  let h;
 
   if(prestazioni.length===1){
     const p0=prestazioni[0];
