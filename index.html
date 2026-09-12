@@ -184,6 +184,31 @@ body{
   .app{border:0;box-shadow:none}
   .msgs{padding:0}
 }
+  .scelte-prestazione{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+}
+
+.scelta-prestazione{
+  display:block;
+  width:100%;
+  padding:11px 14px;
+  border:1px solid #cfdedd;
+  border-radius:10px;
+  background:#fff;
+  color:#173b3a;
+  font-size:14px;
+  font-weight:600;
+  text-align:left;
+  cursor:pointer;
+}
+
+.scelta-prestazione:hover{
+  background:#eaf6f4;
+  border-color:#16877e;
+}
 </style>
 </head>
 <body>
@@ -383,13 +408,12 @@ if(migliori.length>1){
   contestoRichiesta=richiesta;
 
   const opzioni=migliori
-    .map(p=>`<b>${esc(p.p)}</b>`)
-    .join("<br>");
-
+  .map(p=>`<button type="button" class="scelta-prestazione" data-value="${esc(p.p)}" onclick="ask(this.dataset.value)">${esc(p.p)}</button>`)  .join("");
+  .join("");
   bubble(
-    `Ho trovato più prestazioni compatibili con la tua richiesta. Quale di queste intendi?<br><br>${opzioni}`,
-    "bot"
-  );
+  `Ho trovato più prestazioni compatibili con la tua richiesta. Quale di queste intendi?<div class="scelte-prestazione">${opzioni}</div>`,
+  "bot"
+);
 
   return;
 }  let h;
