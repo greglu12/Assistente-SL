@@ -344,8 +344,28 @@ function ricercaCatalogoAI(dati, richiesta){
   }
 
   t=[...new Set(t)];
+let catalogoRicerca=D;
 
-  let risultati=D
+const areaAI=n(data.area_clinica || "");
+const confidenzaAI=Number(data.confidenza || 0);
+
+if(areaAI && confidenzaAI>=0.8){
+  const filtratoArea=D.filter(r=>{
+    const specialita=n(r.specialita || "");
+
+    if(specialita===areaAI) return true;
+
+    const paroleSpecialita=specialita.split(/\s+/);
+    const paroleArea=areaAI.split(/\s+/);
+
+    return paroleArea.every(p=>paroleSpecialita.includes(p));
+  });
+
+  if(filtratoArea.length){
+    catalogoRicerca=filtratoArea;
+  }
+}
+  let risultati=catalogoRicerca
     .map(r=>({r,sc:score(r,t)}))
     .filter(x=>x.sc>0)
     .sort((a,b)=>b.sc-a.sc);
