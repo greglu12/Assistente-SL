@@ -346,8 +346,8 @@ function ricercaCatalogoAI(dati, richiesta){
   t=[...new Set(t)];
 let catalogoRicerca=D;
 
-const areaAI=n(data.area_clinica || "");
-const confidenzaAI=Number(data.confidenza || 0);
+const areaAI=n(dati.area_clinica || "");
+const confidenzaAI=Number(dati.confidenza || 0);
 
 if(areaAI && confidenzaAI>=0.8){
   const filtratoArea=D.filter(r=>{
