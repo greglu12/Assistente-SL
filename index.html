@@ -408,7 +408,7 @@ if(migliori.length>1){
   contestoRichiesta=richiesta;
 
   const opzioni=migliori
-  .map(p=>`<button type="button" class="scelta-prestazione" data-value="${esc(p.p)}" onclick="ask(this.dataset.value)">${esc(p.p)}</button>`)  .join("");
+  .map(p=>`<button type="button" class="scelta-prestazione" onclick="ask(this.textContent)">${esc(p.p)}</button>`)
   .join("");
   bubble(
   `Ho trovato più prestazioni compatibili con la tua richiesta. Quale di queste intendi?<div class="scelte-prestazione">${opzioni}</div>`,
