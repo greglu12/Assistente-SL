@@ -554,7 +554,7 @@ const richiestaCompleta = contestoRichiesta
   }catch(errore){
 
     console.error(errore);
-
+    alert("ERRORE: " + errore.message);
     bubble(
       "Al momento non riesco a elaborare la richiesta. Riprova tra poco.",
       "bot"
