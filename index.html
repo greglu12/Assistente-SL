@@ -394,33 +394,37 @@ const richiestaDaSintomo =
 
 if (richiestaDaSintomo) {
 
+  // Se l'utente descrive un sintomo e l'AI indica una visita specialistica,
+  // cerchiamo nel catalogo le vere visite dell'area clinica individuata.
   const visiteBase = catalogoRicerca.filter(r => {
-  const prestazione = n(r.p || "");
-  const descrizione = n(r.d || "");
-  const testoVisita = prestazione + " " + descrizione;
 
-    // Deve essere una vera visita
+    const prestazione = n(r.p || "");
+    const descrizione = n(r.d || "");
+    const specialita = n(r.specialita || "");
+    const testoVisita = prestazione + " " + descrizione;
+
+    // Deve appartenere all'area clinica individuata dall'AI
+    const areaCorretta =
+      areaAI &&
+      (
+        specialita === areaAI ||
+        specialita.includes(areaAI) ||
+        areaAI.includes(specialita)
+      );
+
+    if (!areaCorretta) return false;
+
+    // Deve essere realmente una visita
     const eVisita =
       testoVisita.includes("visita") &&
       !prestazione.includes("uroflussometr") &&
       !prestazione.includes("ecograf") &&
       !prestazione.includes("doppler") &&
       !prestazione.includes("ecg") &&
-      !prestazione.includes("elettrocardiogram");
+      !prestazione.includes("elettrocardiogram") &&
+      !prestazione.includes("holter");
 
-    if (!eVisita) return false;
-
-    // Preferiamo "prima visita" quando presente
-    return (
-      testoVisita.includes("prima visita") ||
-      prestazione === "visita urologica" ||
-      prestazione === "visita cardiologica" ||
-      prestazione === "visita ginecologica" ||
-      prestazione === "visita ortopedica" ||
-      prestazione === "visita oculistica" ||
-      prestazione === "visita pneumologica" ||
-      prestazione === "visita gastroenterologica"
-    );
+    return eVisita;
   });
 
   if (visiteBase.length) {
