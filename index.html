@@ -584,7 +584,24 @@ if (primeVisite.length) {
 
       gruppi[k].sc=Math.max(gruppi[k].sc,x.sc);
     });
+// Se la richiesta nasce da un sintomo e l'AI indica una visita specialistica,
+// privilegiamo le prime visite della specialità rispetto a procedure/interventi.
+if (
+  tipoRichiestaAI.includes("sintomo") &&
+  intentoAI.includes("visita") &&
+  primeVisite.length
+) {
+  const nomiPrimeVisite = new Set(
+    primeVisite.map(r => n(r.p || ""))
+  );
 
+  Object.values(gruppi).forEach(g => {
+    if (nomiPrimeVisite.has(n(g.p || ""))) {
+      g.sc += 20;
+    }
+  });
+}
+  
   const prestazioni=Object.values(gruppi)
     .sort((a,b)=>b.sc-a.sc)
     .slice(0,5);
