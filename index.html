@@ -380,6 +380,52 @@ function ricercaCatalogoAI(dati, richiesta){
     }
   }
 
+  // ==========================================================
+// Se l'AI ha interpretato un SINTOMO e orienta verso una
+// visita specialistica, privilegiamo la visita base dell'area.
+// Non scegliamo procedure, interventi o esami specifici.
+// ==========================================================
+
+const richiestaDaSintomo =
+  (dati.tipo_richiesta || "").toLowerCase() === "sintomo" &&
+  (dati.intento || "").toLowerCase().includes("visita") &&
+  areaAI &&
+  confidenzaAI >= 0.8;
+
+if (richiestaDaSintomo) {
+
+  const visiteBase = catalogoRicerca.filter(r => {
+
+    const prestazione = n(r.p || "");
+
+    // Deve essere una vera visita
+    const eVisita =
+      prestazione.includes("visita") &&
+      !prestazione.includes("uroflussometr") &&
+      !prestazione.includes("ecograf") &&
+      !prestazione.includes("doppler") &&
+      !prestazione.includes("ecg") &&
+      !prestazione.includes("elettrocardiogram");
+
+    if (!eVisita) return false;
+
+    // Preferiamo "prima visita" quando presente
+    return (
+      prestazione.includes("prima visita") ||
+      prestazione === "visita urologica" ||
+      prestazione === "visita cardiologica" ||
+      prestazione === "visita ginecologica" ||
+      prestazione === "visita ortopedica" ||
+      prestazione === "visita oculistica" ||
+      prestazione === "visita pneumologica" ||
+      prestazione === "visita gastroenterologica"
+    );
+  });
+
+  if (visiteBase.length) {
+    catalogoRicerca = visiteBase;
+  }
+}
   // ------------------------------------------------------------
   // 2. Valutiamo SOLO le prestazioni realmente presenti
   //    nel catalogo Santa Lucia
