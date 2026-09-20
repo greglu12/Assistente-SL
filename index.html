@@ -590,10 +590,10 @@ if (primeVisite.length) {
 if (
   tipoRichiestaAI.includes("sintomo") &&
   intentoAI.includes("visita") &&
-  primeVisite.length
+  visiteBase.length
 ) {
   const nomiPrimeVisite = new Set(
-    primeVisite.map(r => n(r.p || ""))
+    visiteBase.map(r => n(r.p || ""))
   );
 
   Object.values(gruppi).forEach(g => {
