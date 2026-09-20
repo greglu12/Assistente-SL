@@ -389,9 +389,8 @@ function ricercaCatalogoAI(dati, richiesta){
 const richiestaDaSintomo =
   (dati.tipo_richiesta || "").toLowerCase() === "sintomo" &&
   (dati.intento || "").toLowerCase().includes("visita") &&
-  areaAI &&
-  confidenzaAI >= 0.8;
-
+  areaAI;
+  
 if (richiestaDaSintomo) {
 
   // Se l'utente descrive un sintomo e l'AI indica una visita specialistica,
