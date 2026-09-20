@@ -395,12 +395,13 @@ const richiestaDaSintomo =
 if (richiestaDaSintomo) {
 
   const visiteBase = catalogoRicerca.filter(r => {
-
-    const prestazione = n(r.p || "");
+  const prestazione = n(r.p || "");
+  const descrizione = n(r.d || "");
+  const testoVisita = prestazione + " " + descrizione;
 
     // Deve essere una vera visita
     const eVisita =
-      prestazione.includes("visita") &&
+      testoVisita.includes("visita") &&
       !prestazione.includes("uroflussometr") &&
       !prestazione.includes("ecograf") &&
       !prestazione.includes("doppler") &&
@@ -411,7 +412,7 @@ if (richiestaDaSintomo) {
 
     // Preferiamo "prima visita" quando presente
     return (
-      prestazione.includes("prima visita") ||
+      testoVisita.includes("prima visita") ||
       prestazione === "visita urologica" ||
       prestazione === "visita cardiologica" ||
       prestazione === "visita ginecologica" ||
