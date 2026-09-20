@@ -319,90 +319,174 @@ let contestoRichiesta = "";
   
 function ricercaCatalogoAI(dati, richiesta){
 
-  // Costruiamo la ricerca usando ciò che ha capito l'AI,
-  // ma i risultati vengono sempre e solo dal catalogo D.
-  const parti=[
-  richiesta,
-  dati.area_clinica || "",
-  dati.intento || "",
-  dati.termine_normalizzato || "",
-  ...(Array.isArray(dati.sinonimi) ? dati.sinonimi : []),
-  ...(Array.isArray(dati.concetti) ? dati.concetti : [])
-];
+    // ============================================================
+  // NUOVA LOGICA:
+  // l'AI interpreta la richiesta;
+  // il catalogo Santa Lucia verifica solo ciò che esiste davvero.
+  // ============================================================
 
-  let t=terms(parti.join(" "));
+  const areaAI = n(dati.area_clinica || "");
+  const intentoAI = n(dati.intento || "");
+  const termineAI = n(dati.termine_normalizzato || "");
+  const confidenzaAI = Number(dati.confidenza || 0);
 
-  // Alcune equivalenze utili per il catalogo Santa Lucia
-  const testo=n(parti.join(" "));
+  const sinonimiAI = Array.isArray(dati.sinonimi)
+    ? dati.sinonimi.map(n)
+    : [];
 
-  if(testo.includes("addominal")){
-    t.push("addome","addominale");
+  const concettiAI = Array.isArray(dati.concetti)
+    ? dati.concetti.map(n)
+    : [];
+
+  // Costruiamo il significato complessivo interpretato dall'AI.
+  // Non aggiungiamo qui regole cliniche specifiche.
+  const terminiAI = [
+    intentoAI,
+    termineAI,
+    ...sinonimiAI,
+    ...concettiAI
+  ].filter(Boolean);
+
+  // ------------------------------------------------------------
+  // 1. L'area clinica indicata dall'AI delimita il catalogo
+  // ------------------------------------------------------------
+
+  let catalogoRicerca = D;
+
+  if (areaAI && confidenzaAI >= 0.8) {
+
+    const filtratoArea = D.filter(r => {
+
+      const specialita = n(r.specialita || "");
+
+      if (!specialita) return false;
+
+      // corrispondenza esatta
+      if (specialita === areaAI) return true;
+
+      // permette casi come:
+      // "Pneumologia" / "Pneumologia e allergologia"
+      const paroleArea = areaAI
+        .split(/\s+/)
+        .filter(p => p.length > 2);
+
+      return paroleArea.some(
+        p => specialita.includes(p)
+      );
+    });
+
+    if (filtratoArea.length) {
+      catalogoRicerca = filtratoArea;
+    }
   }
 
-  if(testo.includes("ecograf")){
-    t.push("ecografia");
-  }
+  // ------------------------------------------------------------
+  // 2. Valutiamo SOLO le prestazioni realmente presenti
+  //    nel catalogo Santa Lucia
+  // ------------------------------------------------------------
 
-  t=[...new Set(t)];
-let catalogoRicerca=D;
+  let risultati = catalogoRicerca
+    .map(r => {
 
-const areaAI=n(dati.area_clinica || "");
-const confidenzaAI=Number(dati.confidenza || 0);
+      const prestazione = n(r.p || "");
+      const specialita = n(r.specialita || "");
 
-if(areaAI && confidenzaAI>=0.8){
-  const filtratoArea=D.filter(r=>{
-    const specialita=n(r.specialita || "");
+      let sc = 0;
 
-    if(specialita===areaAI) return true;
+      // L'area clinica scelta dall'AI ha peso elevato
+      if (areaAI && specialita === areaAI) {
+        sc += 8;
+      } else if (
+        areaAI &&
+        (
+          specialita.includes(areaAI) ||
+          areaAI.includes(specialita)
+        )
+      ) {
+        sc += 6;
+      }
 
-    const paroleSpecialita=specialita.split(/\s+/);
-    const paroleArea=areaAI.split(/\s+/);
+      // Confrontiamo la prestazione con ciò che l'AI
+      // ha capito della richiesta.
+      terminiAI.forEach(termine => {
 
-    return paroleArea.every(p=>paroleSpecialita.includes(p));
-  });
+        if (!termine) return;
 
-  if(filtratoArea.length){
-    catalogoRicerca=filtratoArea;
-  }
-}
-  // Se l'utente chiede genericamente una visita,
-// privilegia la visita base dell'area clinica,
-// senza aggiungere esami o procedure non richiesti.
-const richiestaVisitaGenerica =
-  (dati.intento || "").toLowerCase().includes("visita") &&
-  !/ecograf|elettrocardiogram|ecg|doppler|flussometr|holter|test|esame/i.test(richiesta);
+        if (prestazione === termine) {
+          sc += 12;
+        }
+        else if (prestazione.includes(termine)) {
+          sc += 8;
+        }
+        else {
 
-if (richiestaVisitaGenerica && areaAI && confidenzaAI >= 0.8) {
-  const visiteBase = catalogoRicerca.filter(r => {
-    const prestazione = n(r.p || "");
+          const parole = termine
+            .split(/\s+/)
+            .filter(p => p.length > 2);
 
-    return (
-      prestazione.includes("prima visita") &&
-      !prestazione.includes("con ecograf") &&
-      !prestazione.includes("con ecg") &&
-      !prestazione.includes("con elettrocardiogram") &&
-      !prestazione.includes("con doppler") &&
-      !prestazione.includes("con uroflussometr")
-    );
-  });
+          parole.forEach(parola => {
+            if (prestazione.includes(parola)) {
+              sc += 2;
+            }
+          });
+        }
+      });
 
-  if (visiteBase.length) {
-    catalogoRicerca = visiteBase;
-  }
-}
-  let risultati=catalogoRicerca
-    .map(r=>({r,sc:score(r,t)}))
-    .filter(x=>x.sc>0)
-    .sort((a,b)=>b.sc-a.sc);
+      // Se l'AI sta chiedendo una visita,
+      // favoriamo le prestazioni che sono effettivamente visite.
+      // Questa è una classificazione amministrativa,
+      // non una decisione clinica.
+      if (
+        intentoAI.includes("visita") &&
+        prestazione.includes("visita")
+      ) {
+        sc += 6;
+      }
 
-  if(!risultati.length){
+      // Penalizziamo prestazioni composte se l'AI
+      // non ha richiesto gli esami aggiuntivi.
+      const componenti = [
+        "ecograf",
+        "elettrocardiogram",
+        "ecg",
+        "doppler",
+        "flussometr",
+        "holter",
+        "test"
+      ];
+
+      componenti.forEach(componente => {
+
+        if (
+          prestazione.includes(componente) &&
+          !terminiAI.some(t => t.includes(componente))
+        ) {
+          sc -= 4;
+        }
+
+      });
+
+      return {
+        r,
+        sc
+      };
+    })
+    .filter(x => x.sc > 0)
+    .sort((a,b) => b.sc - a.sc);
+
+  // ------------------------------------------------------------
+  // 3. Nessuna corrispondenza sufficientemente attendibile
+  // ------------------------------------------------------------
+
+  if (!risultati.length) {
+
     bubble(
-      "Non riesco ancora a collegare con sufficiente sicurezza la richiesta a una prestazione presente nel catalogo Santa Lucia. Prova a specificare meglio la zona del corpo o il tipo di esame.",
+      "Ho individuato l'area della tua richiesta, ma non riesco a collegarla con sufficiente sicurezza a una prestazione presente nel catalogo Santa Lucia. Puoi descrivere meglio ciò di cui hai bisogno?",
       "bot"
     );
+
     return;
   }
-
   const best=risultati[0].sc;
   const gruppi={};
 
