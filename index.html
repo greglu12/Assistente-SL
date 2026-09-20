@@ -365,6 +365,31 @@ if(areaAI && confidenzaAI>=0.8){
     catalogoRicerca=filtratoArea;
   }
 }
+  // Se l'utente chiede genericamente una visita,
+// privilegia la visita base dell'area clinica,
+// senza aggiungere esami o procedure non richiesti.
+const richiestaVisitaGenerica =
+  (dati.intento || "").toLowerCase().includes("visita") &&
+  !/ecograf|elettrocardiogram|ecg|doppler|flussometr|holter|test|esame/i.test(richiesta);
+
+if (richiestaVisitaGenerica && areaAI && confidenzaAI >= 0.8) {
+  const visiteBase = catalogoRicerca.filter(r => {
+    const prestazione = n(r.p || "");
+
+    return (
+      prestazione.includes("prima visita") &&
+      !prestazione.includes("con ecograf") &&
+      !prestazione.includes("con ecg") &&
+      !prestazione.includes("con elettrocardiogram") &&
+      !prestazione.includes("con doppler") &&
+      !prestazione.includes("con uroflussometr")
+    );
+  });
+
+  if (visiteBase.length) {
+    catalogoRicerca = visiteBase;
+  }
+}
   let risultati=catalogoRicerca
     .map(r=>({r,sc:score(r,t)}))
     .filter(x=>x.sc>0)
