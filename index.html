@@ -326,6 +326,7 @@ function ricercaCatalogoAI(dati, richiesta){
   // ============================================================
 
   const areaAI = n(dati.area_clinica || "");
+  const tipoRichiestaAI = n(dati.tipo_richiesta || "");
   const intentoAI = n(dati.intento || "");
   const termineAI = n(dati.termine_normalizzato || "");
   const confidenzaAI = Number(dati.confidenza || 0);
