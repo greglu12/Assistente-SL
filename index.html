@@ -589,11 +589,12 @@ if (primeVisite.length) {
 // privilegiamo le prime visite della specialità rispetto a procedure/interventi.
 if (
   tipoRichiestaAI.includes("sintomo") &&
-  intentoAI.includes("visita") &&
-  visiteBase.length
+  intentoAI.includes("visita")
 ) {
   const nomiPrimeVisite = new Set(
-    visiteBase.map(r => n(r.p || ""))
+    Object.values(gruppi)
+      .filter(g => n(g.p || "").includes("prima visita"))
+      .map(g => n(g.p || ""))
   );
 
   Object.values(gruppi).forEach(g => {
