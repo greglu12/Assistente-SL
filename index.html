@@ -399,22 +399,30 @@ if (richiestaDaSintomo) {
 
   const primeVisite = catalogoRicerca.filter(r => {
 
-    const prestazione = n(r.p || r.prestazione || "");
-    const specialita = n(r.specialita || "");
+  const prestazione = n(r.p || r.prestazione || "");
+  const specialita = n(r.specialita || "");
 
-    const areaCorretta =
-      specialita === areaAI ||
-      specialita.includes(areaAI) ||
-      areaAI.includes(specialita);
+  // Considera solo la specialità esatta indicata dall'AI
+  if (specialita !== areaAI) return false;
 
-    if (!areaCorretta) return false;
+  // Considera solo le prime visite
+  return prestazione.includes("prima visita");
+});
 
-    return prestazione.includes("prima visita");
-  });
+if (primeVisite.length) {
 
-  if (primeVisite.length) {
-    catalogoRicerca = primeVisite;
-  }
+  // Se esistono più prime visite, scegliamo quella
+  // con la denominazione più semplice (più corta)
+  const lunghezzaMinima = Math.min(
+    ...primeVisite.map(r =>
+      n(r.p || r.prestazione || "").length
+    )
+  );
+
+  catalogoRicerca = primeVisite.filter(r =>
+    n(r.p || r.prestazione || "").length === lunghezzaMinima
+  );
+}
 }  // ------------------------------------------------------------
   // 2. Valutiamo SOLO le prestazioni realmente presenti
   //    nel catalogo Santa Lucia
