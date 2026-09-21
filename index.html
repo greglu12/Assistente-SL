@@ -387,9 +387,14 @@ function ricercaCatalogoAI(dati, richiesta){
 // ======================================================
 
 const richiestaDaSintomo =
-  (dati.tipo_richiesta || "").toLowerCase() === "sintomo" &&
-  areaAI;
-
+  areaAI &&
+  (
+    (dati.tipo_richiesta || "").toLowerCase() === "sintomo" ||
+    (
+      (dati.tipo_richiesta || "").toLowerCase() === "visita" &&
+      !(dati.tipo_visita || "").trim()
+    )
+  );
 if (richiestaDaSintomo) {
 
   const primeVisite = catalogoRicerca.filter(r => {
