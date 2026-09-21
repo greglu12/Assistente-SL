@@ -381,74 +381,36 @@ function ricercaCatalogoAI(dati, richiesta){
     }
   }
 
-  // ==========================================================
-// Se l'AI ha interpretato un SINTOMO e orienta verso una
-// visita specialistica, privilegiamo la visita base dell'area.
-// Non scegliamo procedure, interventi o esami specifici.
-// ==========================================================
+// ======================================================
+// Se l'AI ha interpretato un SINTOMO,
+// proponiamo la PRIMA VISITA dell'area clinica.
+// ======================================================
 
 const richiestaDaSintomo =
   (dati.tipo_richiesta || "").toLowerCase() === "sintomo" &&
-  (dati.intento || "").toLowerCase().includes("visita") &&
   areaAI;
-  
+
 if (richiestaDaSintomo) {
 
-  // Se l'utente descrive un sintomo e l'AI indica una visita specialistica,
-  // cerchiamo nel catalogo le vere visite dell'area clinica individuata.
-  const visiteBase = catalogoRicerca.filter(r => {
+  const primeVisite = catalogoRicerca.filter(r => {
 
-    const prestazione = n(r.p || "");
-    const descrizione = n(r.d || "");
+    const prestazione = n(r.p || r.prestazione || "");
     const specialita = n(r.specialita || "");
-    const testoVisita = prestazione + " " + descrizione;
 
-    // Deve appartenere all'area clinica individuata dall'AI
     const areaCorretta =
-        areaAI &&
-        (
-            specialita === areaAI ||
-            specialita.includes(areaAI) ||
-            areaAI.includes(specialita)
-        );
+      specialita === areaAI ||
+      specialita.includes(areaAI) ||
+      areaAI.includes(specialita);
 
     if (!areaCorretta) return false;
 
-    // Deve essere realmente una visita
-    const eVisita =
-        testoVisita.includes("visita") &&
-        !prestazione.includes("uroflussometr") &&
-        !prestazione.includes("ecograf") &&
-        !prestazione.includes("doppler") &&
-        !prestazione.includes("ecg") &&
-        !prestazione.includes("elettrocardiogram") &&
-        !prestazione.includes("holter");
+    return prestazione.includes("prima visita");
+  });
 
-    return eVisita;
-});
-
-// Se esistono "prime visite" della specialità,
-// le preferiamo alle visite con esami o procedure aggiuntive.
-const primeVisite = visiteBase.filter(r => {
-    const prestazione = n(r.p || "");
-
-    return (
-        prestazione.includes("prima visita") &&
-        !prestazione.includes("ecograf") &&
-        !prestazione.includes("doppler") &&
-        !prestazione.includes("ecg") &&
-        !prestazione.includes("elettrocardiogram") &&
-        !prestazione.includes("holter")
-    );
-});
-
-if (primeVisite.length) {
+  if (primeVisite.length) {
     catalogoRicerca = primeVisite;
-} else if (visiteBase.length) {
-    catalogoRicerca = visiteBase;
-}
-}
-  // ------------------------------------------------------------
+  }
+}  // ------------------------------------------------------------
   // 2. Valutiamo SOLO le prestazioni realmente presenti
   //    nel catalogo Santa Lucia
   // ------------------------------------------------------------
