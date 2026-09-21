@@ -558,10 +558,10 @@ if (primeVisite.length) {
   const best=risultati[0].sc;
   const gruppi={};
 
-  risultati
-    .filter(x=>x.sc>=Math.max(3,best-3))
-    .slice(0,100)
-    .forEach(x=>{
+(richiestaDaSintomo ? risultati.filter(x => x.sc === best) : risultati)
+  .filter(x => x.sc >= Math.max(3, best-3))
+  .slice(0,100)
+  .forEach(x=>{
 
       const k=n(x.r.prestazione);
 
