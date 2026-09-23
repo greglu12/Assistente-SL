@@ -449,185 +449,138 @@ if (
     dati.oggetto = sinonimiPrestazioni[oggettoNormalizzato];
   }
 }  
-  let risultati = catalogoRicerca
-    .map(r => {
+  // ======================================================
+// MOTORE DI CORRELAZIONE DELLE NOMENCLATURE
+// Nessun punteggio: interprete AI -> catalogo Santa Lucia
+// ======================================================
 
-      const prestazione = n(r.p || "");
-      const specialita = n(r.specialita || "");
+const tipoRichiesta = (dati.tipo_richiesta || "").toLowerCase();
+const oggettoAI = n(dati.oggetto || "");
+const areaRichiesta = n(dati.area_clinica || "");
 
-      let sc = 0;
+// Il nome interpretato dall'AI viene eventualmente tradotto
+// nella nomenclatura utilizzata dal catalogo.
+let nomeCercato = oggettoAI;
 
-      // L'area clinica scelta dall'AI ha peso elevato
-      if (areaAI && specialita === areaAI) {
-        sc += 8;
-      } else if (
-        areaAI &&
-        (
-          specialita.includes(areaAI) ||
-          areaAI.includes(specialita)
-        )
-      ) {
-        sc += 6;
-      }
+if (sinonimiPrestazioni[nomeCercato]) {
+  nomeCercato = n(sinonimiPrestazioni[nomeCercato]);
+}
 
-      // Confrontiamo la prestazione con ciò che l'AI
-      // ha capito della richiesta.
-      terminiAI.forEach(termine => {
+// ------------------------------------------------------
+// 1. RICHIESTA DI UNA PRESTAZIONE PRECISA
+// ------------------------------------------------------
 
-        if (!termine) return;
+let corrispondenze = [];
 
-        if (prestazione === termine) {
-          sc += 12;
-        }
-        else if (prestazione.includes(termine)) {
-          sc += 8;
-        }
-        else {
-
-          const parole = termine
-            .split(/\s+/)
-            .filter(p => p.length > 2);
-
-          parole.forEach(parola => {
-            if (prestazione.includes(parola)) {
-              sc += 2;
-            }
-          });
-        }
-      });
-
-      // Se l'AI sta chiedendo una visita,
-      // favoriamo le prestazioni che sono effettivamente visite.
-      // Questa è una classificazione amministrativa,
-      // non una decisione clinica.
-      if (
-        intentoAI.includes("visita") &&
-        prestazione.includes("visita")
-      ) {
-        sc += 6;
-      }
-
-      // Penalizziamo prestazioni composte se l'AI
-      // non ha richiesto gli esami aggiuntivi.
-      const componenti = [
-        "ecograf",
-        "elettrocardiogram",
-        "ecg",
-        "doppler",
-        "flussometr",
-        "holter",
-        "test"
-      ];
-
-      componenti.forEach(componente => {
-
-        if (
-          prestazione.includes(componente) &&
-          !terminiAI.some(t => t.includes(componente))
-        ) {
-          sc -= 4;
-        }
-
-      });
-
-      return {
-        r,
-        sc
-      };
-    })
-    .filter(x => x.sc > 0)
-    .sort((a,b) => b.sc - a.sc);
-
-  // ------------------------------------------------------------
-  // 3. Nessuna corrispondenza sufficientemente attendibile
-  // ------------------------------------------------------------
-
-  if (!risultati.length) {
-
-    bubble(
-      "Ho individuato l'area della tua richiesta, ma non riesco a collegarla con sufficiente sicurezza a una prestazione presente nel catalogo Santa Lucia. Puoi descrivere meglio ciò di cui hai bisogno?",
-      "bot"
-    );
-
-    return;
-  }
-  const best=risultati[0].sc;
-  const gruppi={};
-
-(richiestaDaSintomo ? risultati.filter(x => x.sc === best) : risultati)
-  .filter(x => x.sc >= Math.max(3, best-3))
-  .slice(0,100)
-  .forEach(x=>{
-
-      const k=n(x.r.prestazione);
-
-      if(!gruppi[k]){
-        gruppi[k]={
-          p:x.r.prestazione,
-          s:x.r.specialita,
-          d:x.r.descrizione,
-          m:new Set(),
-          sc:x.sc
-        };
-      }
-
-      if(x.r.medico){
-        gruppi[k].m.add(x.r.medico);
-      }
-
-      if(!gruppi[k].d && x.r.descrizione){
-        gruppi[k].d=x.r.descrizione;
-      }
-
-      gruppi[k].sc=Math.max(gruppi[k].sc,x.sc);
-    });
-// Se la richiesta nasce da un sintomo e l'AI indica una visita specialistica,
-// privilegiamo le prime visite della specialità rispetto a procedure/interventi.
 if (
-  tipoRichiestaAI.includes("sintomo") &&
-  intentoAI.includes("visita")
+  (tipoRichiesta === "prestazione" || tipoRichiesta === "informazione") &&
+  nomeCercato
 ) {
-  const nomiPrimeVisite = new Set(
-    Object.values(gruppi)
-      .filter(g => n(g.p || "").includes("prima visita"))
-      .map(g => n(g.p || ""))
-  );
 
-  Object.values(gruppi).forEach(g => {
-    if (nomiPrimeVisite.has(n(g.p || ""))) {
-      g.sc += 20;
-    }
+  corrispondenze = catalogoRicerca.filter(r => {
+
+    const nomeCatalogo = n(r.p || r.prestazione || "");
+
+    if (!nomeCatalogo) return false;
+
+    // stessa nomenclatura
+    if (nomeCatalogo === nomeCercato) return true;
+
+    // il catalogo contiene il nome normalizzato
+    if (nomeCatalogo.includes(nomeCercato)) return true;
+
+    // il nome normalizzato contiene la denominazione del catalogo
+    if (nomeCercato.includes(nomeCatalogo)) return true;
+
+    return false;
   });
 }
-  
-  const prestazioni=Object.values(gruppi)
-    .sort((a,b)=>b.sc-a.sc)
-    .slice(0,5);
 
-  if(!prestazioni.length){
-    bubble(
-      "Non ho trovato una corrispondenza sufficientemente precisa nel catalogo Santa Lucia.",
-      "bot"
-    );
-    return;
+// ------------------------------------------------------
+// 2. RICHIESTA DERIVANTE DA UN SINTOMO
+// L'AI individua l'area; il catalogo fornisce la prima visita.
+// ------------------------------------------------------
+
+if (tipoRichiesta === "sintomo" && areaRichiesta) {
+
+  corrispondenze = catalogoRicerca.filter(r => {
+
+    const specialita = n(r.specialita || "");
+    const nomeCatalogo = n(r.p || r.prestazione || "");
+
+    const stessaArea =
+      specialita === areaRichiesta ||
+      specialita.includes(areaRichiesta) ||
+      areaRichiesta.includes(specialita);
+
+    return stessaArea && nomeCatalogo.includes("prima visita");
+  });
+}
+
+// ------------------------------------------------------
+// 3. RICHIESTA GENERICA DI VISITA/SPECIALITÀ
+// ------------------------------------------------------
+
+if (
+  (tipoRichiesta === "visita" || tipoRichiesta === "specialita") &&
+  areaRichiesta
+) {
+
+  corrispondenze = catalogoRicerca.filter(r => {
+
+    const specialita = n(r.specialita || "");
+    const nomeCatalogo = n(r.p || r.prestazione || "");
+
+    const stessaArea =
+      specialita === areaRichiesta ||
+      specialita.includes(areaRichiesta) ||
+      areaRichiesta.includes(specialita);
+
+    if (!stessaArea) return false;
+
+    if (tipoRichiesta === "visita") {
+      return nomeCatalogo.includes("visita");
+    }
+
+    return true;
+  });
+}
+
+// ------------------------------------------------------
+// 4. RAGGRUPPIAMO LE STESSE PRESTAZIONI
+// e raccogliamo tutti i medici associati.
+// ------------------------------------------------------
+
+const gruppi = {};
+
+corrispondenze.forEach(r => {
+
+  const nomePrestazione = r.p || r.prestazione || "";
+  const chiave = n(nomePrestazione);
+
+  if (!chiave) return;
+
+  if (!gruppi[chiave]) {
+    gruppi[chiave] = {
+      p: nomePrestazione,
+      s: r.specialita || "",
+      d: r.descrizione || "",
+      m: new Set()
+    };
   }
-const migliori=prestazioni.filter(
-  p=>p.sc>=prestazioni[0].sc-1
-);
 
-if(migliori.length>1){
-  contestoRichiesta=richiesta;
+  if (r.medico) {
+    gruppi[chiave].m.add(r.medico);
+  }
 
-  const opzioni=migliori
-  .map(p=>`<button type="button" class="scelta-prestazione" onclick="ask(this.textContent)">${esc(p.p)}</button>`)
-  .join("");
-  bubble(
-  `Ho trovato più prestazioni compatibili con la tua richiesta. Quale di queste intendi?<div class="scelte-prestazione">${opzioni}</div>`,
-  "bot"
-);
+  if (!gruppi[chiave].d && r.descrizione) {
+    gruppi[chiave].d = r.descrizione;
+  }
+});
 
-  return;
-}  let h;
+const prestazioni = Object.values(gruppi);
+
+let h;
 
   if(prestazioni.length===1){
     const p0=prestazioni[0];
