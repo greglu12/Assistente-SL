@@ -342,6 +342,7 @@ function ricercaCatalogoAI(dati, richiesta){
   // Costruiamo il significato complessivo interpretato dall'AI.
   // Non aggiungiamo qui regole cliniche specifiche.
   const terminiAI = [
+    n(dati.oggetto || ""),
     intentoAI,
     termineAI,
     ...sinonimiAI,
