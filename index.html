@@ -491,7 +491,7 @@ if (
     if (nomeCatalogo.includes(nomeCercato)) return true;
 
     // il nome normalizzato contiene la denominazione del catalogo
-    if (nomeCercato.includes(nomeCatalogo)) return true;
+    if (nomeCatalogo.length >= 4 && nomeCercato.includes(nomeCatalogo)) return true;
 
     return false;
   });
