@@ -428,6 +428,27 @@ if (primeVisite.length) {
   //    nel catalogo Santa Lucia
   // ------------------------------------------------------------
 
+  // ======================================================
+// Sinonimi / nomi comuni delle prestazioni
+// Traduce il termine usato dal paziente nel nome
+// effettivamente presente nel catalogo Santa Lucia.
+// ======================================================
+
+const sinonimiPrestazioni = {
+  "gastroscopia": "esofagogastroduodenoscopia",
+  "egds": "esofagogastroduodenoscopia"
+};
+
+if (
+  (dati.tipo_richiesta || "").toLowerCase() === "prestazione" &&
+  dati.oggetto
+) {
+  const oggettoNormalizzato = n(dati.oggetto);
+
+  if (sinonimiPrestazioni[oggettoNormalizzato]) {
+    dati.oggetto = sinonimiPrestazioni[oggettoNormalizzato];
+  }
+}  
   let risultati = catalogoRicerca
     .map(r => {
 
